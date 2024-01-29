@@ -1,0 +1,58 @@
+<launch>
+    <arg name="model_file" default="$(find drl_vo_nav)/src/model/drl_vo.zip"/>
+    <arg name="enable_opencv" default="true"/>
+    <arg name="enable_console_output" default="true"/>
+
+    <param name="use_sim_time" value="true"/>
+
+    <!-- Subgoal Publisher, Pure Pursuit Algorithm-->
+    <node name="pure_pursuit" pkg="drl_vo_nav" type="pure_pursuit.py" output="screen" required="true">
+      <remap from="path" to="move_base/NavfnROS/plan"/>
+      <param name="rate"  type="double" value="20"  />
+    </node>
+
+    <!-- Goal visualization -->
+    <node name="goal_visualize" pkg="drl_vo_nav" type="goal_visualize.py" output="screen" />
+
+    <!-- CNN Data Publisher -->
+    <node name="cnn_data_pub" pkg="drl_vo_nav" type="cnn_data_pub.py"/>
+
+    <!-- Robot Pose Publisher -->
+    <node name="robot_pose_pub" pkg="drl_vo_nav" type="robot_pose_pub.py"/>
+
+    <!-- Velocity Smoother -->
+    <!-- Disable Velocity firstly -->>
+    <!-- <include file="$(find turtlebot_teleop)/launch/includes/velocity_smoother.launch.xml"/> -->
+
+    <!-- DRL-VO publisher -->
+    <node name="drl_vo_cmd" pkg="drl_vo_nav" type="drl_vo_inference.py" output="screen">
+      <param name="model_file" value="$(arg model_file)" type="string"/>
+    </node>
+
+    <!-- Mix cmd vel publisher, The exact node publishing velocity command to Isaac Sim -->
+    <node name="mix_cmd_vel" pkg="drl_vo_nav" type="cmd_vel_pub.py" output="screen" >
+<!--       <remap from="cmd_vel" to="teleop_velocity_smoother/raw_cmd_vel"/> -->
+    </node>
+
+    <!-- AMCL -->
+    <include file="$(find isaac_sim)/launch/amcl.launch"/>
+
+    <!-- Move Base -->
+    <node pkg="move_base" type="move_base" name="move_base" respawn="false" output="screen">
+        <rosparam file="$(find isaac_sim)/config/costmap_common_config.yaml" command="load" ns="global_costmap" />
+        <rosparam file="$(find isaac_sim)/config/costmap_common_config.yaml" command="load" ns="local_costmap" />
+        <rosparam file="$(find isaac_sim)/config/global_costmap_config.yaml" command="load" />
+        <rosparam file="$(find isaac_sim)/config/local_costmap_config.yaml" command="load" />
+        <rosparam file="$(find isaac_sim)/config/teb_config.yaml" command="load" />
+        <rosparam file="$(find isaac_sim)/config/move_base_config.yaml" command="load" />
+        <param name="base_global_planner" value="global_planner/GlobalPlanner" />
+        <param name="base_local_planner" value="teb_local_planner/TebLocalPlannerROS" />
+        <remap from="cmd_vel" to="teb_cmd_vel" />
+    </node>
+
+    <!-- Map Server -->>
+    <node pkg="map_server" type="map_server" name="map_server" args="$(find isaac_sim)/map/map.yaml" />
+
+    <!-- Rviz -->>
+    <node pkg="rviz" type="rviz" name="rviz" required="true" args="-d $(find isaac_sim)/rviz/carter.rviz" output="screen" />
+</launch>

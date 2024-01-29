@@ -1,0 +1,9 @@
+<launch>
+    <param name="use_sim_time" value="true"/>
+    <node pkg="gmapping" type="slam_gmapping" name="slam_gmapping" output="screen" clear_params="true">
+        <param name="base_frame" value="base_link"/>
+        <param name="odom_frame" value="odom"/>
+        <rosparam command="load" file="$(find isaac_sim)/config/gmapping_config.yaml" />
+    </node>
+    <node pkg="rviz" type="rviz" name="rviz" requires="true" args="-d $(find isaac_sim)/rviz/carter.rviz" output="screen" />
+</launch>
