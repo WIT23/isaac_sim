@@ -223,7 +223,7 @@ Visualization Manager:
       Marker Topic: /goal_markers
       Name: GoalMark
       Namespaces:
-        "": true
+        {}
       Queue Size: 100
       Value: true
   Enabled: true
@@ -254,7 +254,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 18.430797576904297
+      Distance: 37.894287109375
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -262,9 +262,9 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 2.668257713317871
-        Y: -0.5336602926254272
-        Z: -3.6304664611816406
+        X: 11.514430046081543
+        Y: 7.451747417449951
+        Z: -3.5784122943878174
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
@@ -291,4 +291,4 @@ Window Geometry:
     collapsed: true
   Width: 1112
   X: 72
-  Y: 44
+  Y: 27
