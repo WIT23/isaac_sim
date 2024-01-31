@@ -24,6 +24,7 @@ from omni.isaac.core.utils.nucleus import get_assets_root_path
 from omni.isaac.core.objects import DynamicCuboid
 from omni.isaac.wheeled_robots.robots import WheeledRobot
 from omni.isaac.wheeled_robots.controllers.differential_controller import DifferentialController
+from omni.isaac.core.prims import XFormPrim
 import omni.graph.core as og
 
 # ros
@@ -67,11 +68,12 @@ class IsaacSimConnection:
         self.obstacles = []
         self._add_robot()
         self._add_obstacle()
-        self.world.reset()
+        # self.world.reset()
         # self.set_namespace()
 
     def cycle(self):
         self.world.reset()
+        self.world.initialize_physics()
         simulation_app.update()
         self.world.play()
         simulation_app.update()
@@ -102,7 +104,7 @@ class IsaacSimConnection:
                 wheel_dof_names=wheel_dof_names,
                 create_robot=True,
                 usd_path=CARTER_USD_PATH,
-                position=np.array([0, 0.0, 0]),
+                position=np.array([-4.0, 0.0, 0]),
                 orientation=np.array([1.0, 0.0, 0.0, 0.0]),
             )
         )
@@ -110,17 +112,54 @@ class IsaacSimConnection:
         self.robot_controller = DifferentialController(name="simple_control", wheel_radius=0.0325, wheel_base=0.1125)
 
     def _add_obstacle(self):
-        obstacle = self.world.scene.add(
-            DynamicCuboid(
-                prim_path="/World/cube",
-                name="cube",
-                position=np.array([-0.60, -0.30, 0.05]),
-                size=0.1,
-                color=np.array([1.0, 0, 0]),
-                scale=np.array([1.0, 1.0, 5.0])
+        xform = self.world.scene.add(
+            XFormPrim(
+                prim_path="/World/Env",
+                name="EnvXForm"
             )
         )
-        self.obstacles.append(obstacle)
+        bound_position = np.array(
+            [(5.5, 0.0, 0.5),
+             (0.0, 5.5, 0.5),
+             (-5.5, 0.0, 0.5),
+             (0.0, -5.5, 0.5)]
+        )
+        bound_scale = np.array(
+            [(1.0, 12.0, 1.0),
+             (10.0, 1.0, 1.0)]
+        )
+        for i in range(4):
+            self.world.scene.add(
+                DynamicCuboid(
+                    prim_path=f"/World/Env/bound{i + 1}",
+                    name=f"bound{i + 1}",
+                    position=bound_position[i],
+                    color=np.array([1.0, 1.0, 1.0]),
+                    scale=bound_scale[i % 2]
+                )
+            )
+
+        for i in range(4):
+            self.world.scene.add(
+                DynamicCuboid(
+                    prim_path=f"/World/Env/obstacle{i + 1}",
+                    name=f"obstacle{i + 1}",
+                    position=np.array([-1.5, -2.5 + i * 2, 0.5]),
+                    color=np.array([1.0, 1.0, 1.0]),
+                    scale=np.array([3.0, 1.0, 1.0])
+                )
+            )
+
+        for i in range(4):
+            self.world.scene.add(
+                DynamicCuboid(
+                    prim_path=f"/World/Env/obstacle{i + 1 + 4}",
+                    name=f"obstacle{i + 1 + 4}",
+                    position=np.array([2.5, -2.5 + i * 2, 0.5]),
+                    color=np.array([1.0, 1.0, 1.0]),
+                    scale=np.array([3.0, 1.0, 1.0])
+                )
+            )
 
     @staticmethod
     def _set_namespace():
