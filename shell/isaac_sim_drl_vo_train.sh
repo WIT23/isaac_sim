@@ -1,4 +1,4 @@
-session="isaac_sim_navigation"
+session="isaac_sim_drl_vo_train"
 
 tmux new-session -d -s $session
 
@@ -12,4 +12,4 @@ tmux new-window -t $session:$window -n "navigation"
 tmux send-keys -t $session:$window "sleep 15s" C-m
 tmux send-keys -t $session:$window "cd ~/isaac_sim_ws/" C-m
 tmux send-keys -t $session:$window "source devel/setup.bash" C-m
-tmux send-keys -t $session:$window "roslaunch isaac_sim navigation.launch" C-m
+tmux send-keys -t $session:$window "roslaunch isaac_sim drl_vo_train.launch" C-m
