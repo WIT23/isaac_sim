@@ -51,7 +51,7 @@
     </node>
 
     <!-- Map Server -->>
-    <node pkg="map_server" type="map_server" name="map_server" args="$(find isaac_sim)/map/map.yaml" />
+    <node pkg="map_server" type="map_server" name="map_server" args="$(find isaac_sim)/map/isaac_map.yaml" />
 
     <!-- Rviz -->>
     <node pkg="rviz" type="rviz" name="rviz" required="true" args="-d $(find isaac_sim)/rviz/carter.rviz" output="screen" />
