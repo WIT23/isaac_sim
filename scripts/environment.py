@@ -4,6 +4,7 @@
 from omni.isaac.kit import SimulationApp
 
 CARTER_USD_PATH = "/home/gr-agv-lx91/isaac_sim_ws/src/isaac_sim/isaac/carter.usd"
+ENV_USD_PATH = "/home/gr-agv-lx91/isaac_sim_ws/src/isaac_sim/isaac/env.usd"
 config = {
     "headless": False,
 }
@@ -17,15 +18,14 @@ import carb
 import time
 
 # isaac
-import omni
 from omni.isaac.core import World
 from omni.isaac.core.utils.extensions import enable_extension
 from omni.isaac.core.utils.nucleus import get_assets_root_path
-from omni.isaac.core.objects import DynamicCuboid
 from omni.isaac.wheeled_robots.robots import WheeledRobot
 from omni.isaac.wheeled_robots.controllers.differential_controller import DifferentialController
-from omni.isaac.core.prims import XFormPrim
+from omni.isaac.core.prims import XFormPrim, GeometryPrim
 import omni.graph.core as og
+from omni.isaac.core.utils.stage import add_reference_to_stage
 
 # ros
 import rospy
@@ -67,7 +67,8 @@ class IsaacSimConnection:
         self.robots = []
         self.obstacles = []
         self._add_robot()
-        self._add_obstacle()
+        self._add_env()
+        self._add_action_graph()
         # self.world.reset()
         # self.set_namespace()
 
@@ -87,7 +88,12 @@ class IsaacSimConnection:
                 self.world.step()
                 self.state = SimulationState.NORMAL
             elif self.state == SimulationState.RESET:
-                self.world.reset()
+                self.robot.set_world_pose(
+                    position=np.array([1.5, 1.5, 0]),
+                    orientation=np.array([1.0, 0.0, 0.0, 0.0])
+                )
+                self.world.play()
+                self.world.step()
                 self.state = SimulationState.NORMAL
             elif self.state == SimulationState.CLOSE:
                 break
@@ -104,62 +110,42 @@ class IsaacSimConnection:
                 wheel_dof_names=wheel_dof_names,
                 create_robot=True,
                 usd_path=CARTER_USD_PATH,
-                position=np.array([-4.0, 0.0, 0]),
-                orientation=np.array([1.0, 0.0, 0.0, 0.0]),
+                position=np.array([1.5, 1.5, 0]),
+                orientation=np.array([1.0, 0.0, 0.0, 0.0])
             )
         )
         self.robots.append(self.robot)
         self.robot_controller = DifferentialController(name="simple_control", wheel_radius=0.0325, wheel_base=0.1125)
 
-    def _add_obstacle(self):
-        xform = self.world.scene.add(
-            XFormPrim(
+    def _add_env(self):
+        add_reference_to_stage(usd_path=ENV_USD_PATH, prim_path="/World/Env")
+        self.world.scene.add(
+            GeometryPrim(
                 prim_path="/World/Env",
-                name="EnvXForm"
+                name="Env",
+                collision=True
             )
         )
-        bound_position = np.array(
-            [(5.5, 0.0, 0.5),
-             (0.0, 5.5, 0.5),
-             (-5.5, 0.0, 0.5),
-             (0.0, -5.5, 0.5)]
-        )
-        bound_scale = np.array(
-            [(1.0, 12.0, 1.0),
-             (10.0, 1.0, 1.0)]
-        )
-        for i in range(4):
-            self.world.scene.add(
-                DynamicCuboid(
-                    prim_path=f"/World/Env/bound{i + 1}",
-                    name=f"bound{i + 1}",
-                    position=bound_position[i],
-                    color=np.array([1.0, 1.0, 1.0]),
-                    scale=bound_scale[i % 2]
-                )
-            )
 
-        for i in range(4):
-            self.world.scene.add(
-                DynamicCuboid(
-                    prim_path=f"/World/Env/obstacle{i + 1}",
-                    name=f"obstacle{i + 1}",
-                    position=np.array([-1.5, -2.5 + i * 2, 0.5]),
-                    color=np.array([1.0, 1.0, 1.0]),
-                    scale=np.array([3.0, 1.0, 1.0])
-                )
-            )
-
-        for i in range(4):
-            self.world.scene.add(
-                DynamicCuboid(
-                    prim_path=f"/World/Env/obstacle{i + 1 + 4}",
-                    name=f"obstacle{i + 1 + 4}",
-                    position=np.array([2.5, -2.5 + i * 2, 0.5]),
-                    color=np.array([1.0, 1.0, 1.0]),
-                    scale=np.array([3.0, 1.0, 1.0])
-                )
-            )
+    def _add_action_graph(self):
+        keys = og.Controller.Keys
+        og.Controller.edit(
+            {"graph_path": "/World/clock_graph", "evaluator_name": "execution"},
+            {
+                keys.CREATE_NODES: [
+                    ("OnTick", "omni.graph.action.OnPlaybackTick"),
+                    ("SimTime", "omni.isaac.core_nodes.IsaacReadSimulationTime"),
+                    ("ClockPub", "omni.isaac.ros_bridge.ROS1PublishClock"),
+                ],
+                keys.SET_VALUES: [
+                    ("ClockPub.inputs:topicName", "clock"),
+                ],
+                keys.CONNECT: [
+                    ("SimTime.outputs:simulationTime", "ClockPub.inputs:timeStamp"),
+                    ("OnTick.outputs:tick", "ClockPub.inputs:execIn"),
+                ]
+            }
+        )
 
     @staticmethod
     def _set_namespace():

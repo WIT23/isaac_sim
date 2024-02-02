@@ -5,6 +5,17 @@
 import omni
 import omni.graph.core as og
 from omni.isaac.core.utils.prims import set_targets
+from omni.isaac.core import World
+from omni.isaac.core.utils.extensions import enable_extension
+from omni.isaac.core.utils.nucleus import get_assets_root_path
+from omni.isaac.core.objects import DynamicCuboid
+from omni.isaac.wheeled_robots.robots import WheeledRobot
+from omni.isaac.wheeled_robots.controllers.differential_controller import DifferentialController
+from omni.isaac.core.prims import XFormPrim, GeometryPrim
+import omni.graph.core as og
+from omni.isaac.core.utils.stage import add_reference_to_stage
+import numpy as np
+
 
 def add_action_graph(self, prefix):
     stage = omni.usd.get_context().get_stage()
@@ -110,3 +121,57 @@ def add_action_graph(self, prefix):
             ]
         }
     )
+
+
+def _add_obstacle(world):
+    xform = world.scene.add(
+        XFormPrim(
+            prim_path="/World/Env",
+            name="EnvXForm"
+        )
+    )
+    bound_position = np.array(
+        [(5.5, 0.0, 0.5),
+         (0.0, 5.5, 0.5),
+         (-5.5, 0.0, 0.5),
+         (0.0, -5.5, 0.5)]
+    )
+    bound_scale = np.array(
+        [(1.0, 12.0, 1.0),
+         (10.0, 1.0, 1.0)]
+    )
+    for i in range(4):
+        world.scene.add(
+            DynamicCuboid(
+                prim_path=f"/World/Env/bound{i + 1}",
+                name=f"bound{i + 1}",
+                mass=1000.0,
+                position=bound_position[i],
+                color=np.array([1.0, 1.0, 1.0]),
+                scale=bound_scale[i % 2]
+            )
+        )
+
+    for i in range(4):
+        world.scene.add(
+            DynamicCuboid(
+                prim_path=f"/World/Env/obstacle{i + 1}",
+                name=f"obstacle{i + 1}",
+                mass=10000.0,
+                position=np.array([-1.5, -2.5 + i * 2, 0.5]),
+                color=np.array([1.0, 1.0, 1.0]),
+                scale=np.array([3.0, 1.0, 1.0])
+            )
+        )
+
+    for i in range(4):
+        world.scene.add(
+            DynamicCuboid(
+                prim_path=f"/World/Env/obstacle{i + 1 + 4}",
+                name=f"obstacle{i + 1 + 4}",
+                mass=10000.0,
+                position=np.array([2.5, -2.5 + i * 2, 0.5]),
+                color=np.array([1.0, 1.0, 1.0]),
+                scale=np.array([3.0, 1.0, 1.0])
+            )
+        )
